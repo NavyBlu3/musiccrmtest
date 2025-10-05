@@ -21,17 +21,17 @@ const pool = new Pool({
 // Classrooms (çalışıyor)
 app.get('/api/classrooms', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, name, type FROM rooms ORDER BY id ASC');
+    const { rows } = await pool.query('SELECT id, name, type FROM classrooms ORDER BY id ASC');
     return res.json(rows);
   } catch (e) {
-    return res.status(500).json({ error: 'rooms_query_failed' });
+    return res.status(500).json({ error: 'classrooms_query_failed' });
   }
 });
 
 // Teachers
 app.get('/api/teachers', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, name, hourly_rate, can_teach_art FROM teachers ORDER BY id DESC');
+    const { rows } = await pool.query('SELECT id, first_name, last_name, hourly_rate, can_teach_art FROM teachers ORDER BY id DESC');
     return res.json(rows);
   } catch (e) {
     return res.status(500).json({ error: 'teachers_query_failed' });
@@ -41,7 +41,7 @@ app.get('/api/teachers', async (req, res) => {
 // Students
 app.get('/api/students', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, name, parent_name, phone FROM students ORDER BY id DESC');
+    const { rows } = await pool.query('SELECT id, first_name, last_name, parent_name, phone FROM students ORDER BY id DESC');
     return res.json(rows);
   } catch (e) {
     return res.status(500).json({ error: 'students_query_failed' });
@@ -52,8 +52,8 @@ app.get('/api/students', async (req, res) => {
 app.get('/api/lessons', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT id, student_id, teacher_id, room_id, subject, starts_at, ends_at, price
-      FROM lessons ORDER BY starts_at DESC
+      SELECT id, student_id, teacher_id, classroom_id, lesson_type, instrument, hourly_rate, is_active
+      FROM lessons WHERE is_active = true ORDER BY created_at DESC
     `);
     return res.json(rows);
   } catch (e) {
@@ -65,8 +65,8 @@ app.get('/api/lessons', async (req, res) => {
 app.get('/api/payments', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT id, teacher_id, amount, paid_at, note
-      FROM payments ORDER BY paid_at DESC
+      SELECT id, teacher_id, amount, payment_date, month, year, status, notes
+      FROM payments ORDER BY payment_date DESC
     `);
     return res.json(rows);
   } catch (e) {
@@ -78,13 +78,18 @@ app.get('/api/payments', async (req, res) => {
 app.get('/api/schedule', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT l.id, l.starts_at, l.ends_at, l.subject,
-             s.name AS student_name, t.name AS teacher_name, r.name AS room_name
-      FROM lessons l
-      LEFT JOIN students s ON s.id = l.student_id
+      SELECT s.id, s.day_of_week, s.start_time, s.end_time, s.is_recurring, s.start_date, s.end_date,
+             l.lesson_type, l.instrument, l.hourly_rate,
+             st.first_name AS student_first_name, st.last_name AS student_last_name,
+             t.first_name AS teacher_first_name, t.last_name AS teacher_last_name,
+             c.name AS classroom_name, c.type AS classroom_type
+      FROM schedule s
+      JOIN lessons l ON s.lesson_id = l.id
+      LEFT JOIN students st ON st.id = l.student_id
       LEFT JOIN teachers t ON t.id = l.teacher_id
-      LEFT JOIN rooms r ON r.id = l.room_id
-      ORDER BY l.starts_at DESC
+      LEFT JOIN classrooms c ON c.id = l.classroom_id
+      WHERE l.is_active = true
+      ORDER BY s.day_of_week, s.start_time
     `);
     return res.json(rows);
   } catch (e) {
@@ -96,13 +101,13 @@ app.get('/api/schedule', async (req, res) => {
 app.get('/api/reports', async (req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT t.id AS teacher_id, t.name AS teacher_name,
-             DATE_TRUNC('month', l.starts_at) AS month,
-             COALESCE(SUM(l.price), 0) AS revenue
+      SELECT t.id AS teacher_id, t.first_name, t.last_name,
+             p.month, p.year,
+             COALESCE(SUM(p.amount), 0) AS revenue
       FROM teachers t
-      LEFT JOIN lessons l ON l.teacher_id = t.id
-      GROUP BY t.id, t.name, DATE_TRUNC('month', l.starts_at)
-      ORDER BY month DESC, teacher_name ASC
+      LEFT JOIN payments p ON p.teacher_id = t.id AND p.status = 'paid'
+      GROUP BY t.id, t.first_name, t.last_name, p.month, p.year
+      ORDER BY p.year DESC, p.month DESC, t.first_name ASC
     `);
     return res.json(rows);
   } catch (e) {
