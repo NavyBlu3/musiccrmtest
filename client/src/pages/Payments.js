@@ -299,6 +299,17 @@ const TextArea = styled.textarea`
   }
 `;
 
+const CheckboxGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Checkbox = styled.input`
+  width: 16px;
+  height: 16px;
+`;
+
 const ModalActions = styled.div`
   display: flex;
   gap: 10px;
