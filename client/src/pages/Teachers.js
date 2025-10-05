@@ -327,11 +327,82 @@ const Button = styled.button`
   }
 `;
 
+const FilterSection = styled.div`
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+`;
+
+const FilterRow = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+`;
+
+const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
+const FilterLabel = styled.label`
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+`;
+
+const FilterInput = styled.input`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const FilterSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const ClearButton = styled.button`
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  
+  &:hover {
+    background: #545b62;
+  }
+`;
+
 const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
+  const [filteredTeachers, setFilteredTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    instrument: '',
+    hourly_rate_range: ''
+  });
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -348,6 +419,43 @@ const Teachers = () => {
   useEffect(() => {
     fetchTeachers();
   }, []);
+
+  useEffect(() => {
+    filterTeachers();
+  }, [teachers, filters]);
+
+  const filterTeachers = () => {
+    let filtered = [...teachers];
+
+    // Arama filtresi
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(teacher => 
+        `${teacher.first_name} ${teacher.last_name}`.toLowerCase().includes(searchLower) ||
+        teacher.email?.toLowerCase().includes(searchLower) ||
+        teacher.phone?.includes(searchLower)
+      );
+    }
+
+    // Enstrüman filtresi
+    if (filters.instrument) {
+      filtered = filtered.filter(teacher => 
+        teacher.instruments?.includes(filters.instrument) ||
+        (filters.instrument === 'resim' && teacher.can_teach_art)
+      );
+    }
+
+    // Saatlik ücret aralığı filtresi
+    if (filters.hourly_rate_range) {
+      const [minRate, maxRate] = filters.hourly_rate_range.split('-').map(Number);
+      filtered = filtered.filter(teacher => {
+        const rate = parseFloat(teacher.hourly_rate);
+        return rate >= minRate && rate <= maxRate;
+      });
+    }
+
+    setFilteredTeachers(filtered);
+  };
 
   const fetchTeachers = async () => {
     try {
@@ -456,8 +564,57 @@ const Teachers = () => {
         </AddButton>
       </Header>
 
+      <FilterSection>
+        <h3 style={{ marginBottom: '15px', color: '#333' }}>Filtreler</h3>
+        <FilterRow>
+          <FilterGroup>
+            <FilterLabel>Arama</FilterLabel>
+            <FilterInput
+              type="text"
+              placeholder="Ad, soyad, e-posta veya telefon ile ara..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            />
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Enstrüman</FilterLabel>
+            <FilterSelect
+              value={filters.instrument}
+              onChange={(e) => setFilters({ ...filters, instrument: e.target.value })}
+            >
+              <option value="">Tüm Enstrümanlar</option>
+              <option value="gitar">Gitar</option>
+              <option value="keman">Keman</option>
+              <option value="piyano">Piyano</option>
+              <option value="bağlama">Bağlama</option>
+              <option value="flüt">Flüt</option>
+              <option value="davul">Davul</option>
+              <option value="resim">Resim</option>
+            </FilterSelect>
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Saatlik Ücret</FilterLabel>
+            <FilterSelect
+              value={filters.hourly_rate_range}
+              onChange={(e) => setFilters({ ...filters, hourly_rate_range: e.target.value })}
+            >
+              <option value="">Tüm Ücretler</option>
+              <option value="0-50">0-50₺</option>
+              <option value="51-100">51-100₺</option>
+              <option value="101-150">101-150₺</option>
+              <option value="151-200">151-200₺</option>
+              <option value="201-300">201-300₺</option>
+              <option value="301-1000">300₺+</option>
+            </FilterSelect>
+          </FilterGroup>
+          <ClearButton onClick={() => setFilters({ search: '', instrument: '', hourly_rate_range: '' })}>
+            Temizle
+          </ClearButton>
+        </FilterRow>
+      </FilterSection>
+
       <TeachersGrid>
-        {teachers.map((teacher) => (
+        {filteredTeachers.map((teacher) => (
           <TeacherCard key={teacher.id}>
             <TeacherHeader>
               <TeacherAvatar>

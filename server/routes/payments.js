@@ -124,6 +124,48 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Öğretmen bakiyesi hesapla
+router.get('/teacher-balance/:teacherId', async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    
+    // Öğretmenin bugüne kadar verdiği derslerden kazandığı toplam tutar
+    const earningsResult = await pool.query(`
+      SELECT 
+        COALESCE(SUM(l.hourly_rate * COUNT(s.id)), 0) as total_earnings
+      FROM lessons l
+      LEFT JOIN schedule s ON l.id = s.lesson_id
+      WHERE l.teacher_id = $1 
+        AND l.is_active = true
+        AND s.start_date <= CURRENT_DATE
+      GROUP BY l.id, l.hourly_rate
+    `, [teacherId]);
+    
+    const totalEarnings = earningsResult.rows.reduce((sum, row) => sum + parseFloat(row.total_earnings), 0);
+    
+    // Öğretmenin aldığı toplam ödemeler
+    const paymentsResult = await pool.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_payments
+      FROM payments 
+      WHERE teacher_id = $1 AND status = 'paid'
+    `, [teacherId]);
+    
+    const totalPayments = parseFloat(paymentsResult.rows[0].total_payments);
+    const balance = totalEarnings - totalPayments;
+    
+    res.json({
+      teacher_id: teacherId,
+      total_earnings: totalEarnings,
+      total_payments: totalPayments,
+      balance: balance,
+      balance_status: balance > 0 ? 'positive' : balance < 0 ? 'negative' : 'zero'
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Bakiye hesaplanamadı' });
+  }
+});
+
 // Aylık kazanç raporu oluştur
 router.post('/generate-monthly', async (req, res) => {
   try {

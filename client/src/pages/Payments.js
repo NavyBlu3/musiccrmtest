@@ -340,8 +340,11 @@ const Payments = () => {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     status: 'pending',
-    notes: ''
+    notes: '',
+    is_advance: false
   });
+  const [teacherBalance, setTeacherBalance] = useState(null);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -456,7 +459,8 @@ const Payments = () => {
       month: new Date().getMonth() + 1,
       year: new Date().getFullYear(),
       status: 'pending',
-      notes: ''
+      notes: '',
+      is_advance: false
     });
   };
 
@@ -477,6 +481,24 @@ const Payments = () => {
       case 'paid': return 'Ödendi';
       case 'cancelled': return 'İptal';
       default: return status;
+    }
+  };
+
+  const calculateTeacherBalance = async (teacherId) => {
+    try {
+      const response = await axios.get(`/api/payments/teacher-balance/${teacherId}`);
+      setTeacherBalance(response.data);
+      setShowBalanceModal(true);
+    } catch (error) {
+      console.error('Bakiye hesaplanamadı:', error);
+      alert('Bakiye hesaplanamadı!');
+    }
+  };
+
+  const handleTeacherChange = (teacherId) => {
+    setFormData({ ...formData, teacher_id: teacherId });
+    if (teacherId) {
+      calculateTeacherBalance(teacherId);
     }
   };
 
@@ -672,7 +694,7 @@ const Payments = () => {
                 <Label>Öğretmen</Label>
                 <Select
                   value={formData.teacher_id}
-                  onChange={(e) => setFormData({ ...formData, teacher_id: parseInt(e.target.value) })}
+                  onChange={(e) => handleTeacherChange(parseInt(e.target.value))}
                   required
                 >
                   <option value="">Öğretmen seçin</option>
@@ -746,6 +768,18 @@ const Payments = () => {
               </div>
 
               <FormGroup>
+                <CheckboxGroup>
+                  <Checkbox
+                    type="checkbox"
+                    id="is_advance"
+                    checked={formData.is_advance}
+                    onChange={(e) => setFormData({ ...formData, is_advance: e.target.checked })}
+                  />
+                  <Label htmlFor="is_advance">Bu bir avans ödemesidir</Label>
+                </CheckboxGroup>
+              </FormGroup>
+
+              <FormGroup>
                 <Label>Notlar</Label>
                 <TextArea
                   value={formData.notes}
@@ -762,6 +796,72 @@ const Payments = () => {
                 </Button>
               </ModalActions>
             </form>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {showBalanceModal && teacherBalance && (
+        <Modal onClick={(e) => e.target === e.currentTarget && setShowBalanceModal(false)}>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>Öğretmen Bakiyesi</ModalTitle>
+              <CloseButton onClick={() => setShowBalanceModal(false)}>×</CloseButton>
+            </ModalHeader>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ margin: '0 0 15px 0', color: '#333' }}>
+                {getTeacherName(teacherBalance.teacher_id)}
+              </h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '5px' }}>Toplam Kazanç</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#28a745' }}>
+                    ₺{teacherBalance.total_earnings.toFixed(2)}
+                  </div>
+                </div>
+                
+                <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '5px' }}>Toplam Ödeme</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#007bff' }}>
+                    ₺{teacherBalance.total_payments.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ 
+                background: teacherBalance.balance_status === 'positive' ? '#d4edda' : 
+                           teacherBalance.balance_status === 'negative' ? '#f8d7da' : '#e2e3e5',
+                padding: '15px', 
+                borderRadius: '8px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '5px' }}>Kalan Bakiye</div>
+                <div style={{ 
+                  fontSize: '1.5rem', 
+                  fontWeight: '700',
+                  color: teacherBalance.balance_status === 'positive' ? '#155724' : 
+                         teacherBalance.balance_status === 'negative' ? '#721c24' : '#6c757d'
+                }}>
+                  ₺{teacherBalance.balance.toFixed(2)}
+                </div>
+                <div style={{ 
+                  fontSize: '0.8rem', 
+                  marginTop: '5px',
+                  color: teacherBalance.balance_status === 'positive' ? '#155724' : 
+                         teacherBalance.balance_status === 'negative' ? '#721c24' : '#6c757d'
+                }}>
+                  {teacherBalance.balance_status === 'positive' ? 'Ödenecek tutar' : 
+                   teacherBalance.balance_status === 'negative' ? 'Fazla ödeme' : 'Bakiye sıfır'}
+                </div>
+              </div>
+            </div>
+            
+            <ModalActions>
+              <Button type="button" className="primary" onClick={() => setShowBalanceModal(false)}>
+                Tamam
+              </Button>
+            </ModalActions>
           </ModalContent>
         </Modal>
       )}

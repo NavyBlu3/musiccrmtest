@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Menu, Bell, User } from 'lucide-react';
+import { Menu, User } from 'lucide-react';
 
 const HeaderContainer = styled.header`
   background: white;
@@ -46,16 +46,18 @@ const RightSection = styled.div`
   gap: 15px;
 `;
 
-const NotificationButton = styled.button`
-  background: none;
+const LoginButton = styled.button`
+  background: #007bff;
+  color: white;
   border: none;
-  font-size: 1.2rem;
+  padding: 8px 16px;
+  border-radius: 5px;
   cursor: pointer;
-  color: #666;
-  position: relative;
+  font-size: 0.9rem;
+  font-weight: 500;
   
   &:hover {
-    color: #333;
+    background: #0056b3;
   }
 `;
 
@@ -79,7 +81,59 @@ const UserName = styled.span`
   font-weight: 500;
 `;
 
+const UserDropdown = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const DropdownContent = styled.div`
+  position: absolute;
+  right: 0;
+  background: white;
+  min-width: 160px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  border-radius: 5px;
+  z-index: 1000;
+  display: ${props => props.show ? 'block' : 'none'};
+`;
+
+const DropdownItem = styled.button`
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #333;
+  
+  &:hover {
+    background: #f8f9fa;
+  }
+  
+  &:first-child {
+    border-radius: 5px 5px 0 0;
+  }
+  
+  &:last-child {
+    border-radius: 0 0 5px 5px;
+  }
+`;
+
 const Header = ({ onToggleSidebar }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+
+  const handleLogin = () => {
+    // Basit giriş simülasyonu
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setShowUserDropdown(false);
+  };
+
   return (
     <HeaderContainer>
       <LeftSection>
@@ -89,13 +143,29 @@ const Header = ({ onToggleSidebar }) => {
         <Title>Bariton Müzik Yönetim Otomasyonu</Title>
       </LeftSection>
       <RightSection>
-        <NotificationButton>
-          <Bell size={20} />
-        </NotificationButton>
-        <UserButton>
-          <User size={20} />
-          <UserName>Fatih</UserName>
-        </UserButton>
+        {!isLoggedIn ? (
+          <LoginButton onClick={handleLogin}>
+            Giriş Yap
+          </LoginButton>
+        ) : (
+          <UserDropdown>
+            <UserButton onClick={() => setShowUserDropdown(!showUserDropdown)}>
+              <User size={20} />
+              <UserName>Fatih</UserName>
+            </UserButton>
+            <DropdownContent show={showUserDropdown}>
+              <DropdownItem onClick={() => setShowUserDropdown(false)}>
+                Profil
+              </DropdownItem>
+              <DropdownItem onClick={() => setShowUserDropdown(false)}>
+                Ayarlar
+              </DropdownItem>
+              <DropdownItem onClick={handleLogout}>
+                Çıkış Yap
+              </DropdownItem>
+            </DropdownContent>
+          </UserDropdown>
+        )}
       </RightSection>
     </HeaderContainer>
   );
