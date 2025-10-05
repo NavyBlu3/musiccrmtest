@@ -19,6 +19,33 @@ app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/schedule', require('./routes/schedule'));
 
+// Reports route (simple version)
+app.get('/api/reports', async (req, res) => {
+  try {
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+    
+    const { rows } = await pool.query(`
+      SELECT t.id AS teacher_id, t.first_name, t.last_name,
+             p.month, p.year,
+             COALESCE(SUM(p.amount), 0) AS revenue
+      FROM teachers t
+      LEFT JOIN payments p ON p.teacher_id = t.id AND p.status = 'paid'
+      GROUP BY t.id, t.first_name, t.last_name, p.month, p.year
+      ORDER BY p.year DESC, p.month DESC, t.first_name ASC
+    `);
+    
+    await pool.end();
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Raporlar getirilemedi' });
+  }
+});
+
 // Serve static files from React app in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));
