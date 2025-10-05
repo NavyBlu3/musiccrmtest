@@ -233,45 +233,6 @@ const Dashboard = () => {
         </ChartCard>
       </ChartsGrid>
 
-      <RecentActivity>
-        <ChartTitle>Son Aktiviteler</ChartTitle>
-        <ActivityItem>
-          <ActivityIcon>
-            <Users size={16} />
-          </ActivityIcon>
-          <ActivityContent>
-            <ActivityText>Yeni öğretmen eklendi: Ahmet Yılmaz</ActivityText>
-            <ActivityTime>2 saat önce</ActivityTime>
-          </ActivityContent>
-        </ActivityItem>
-        <ActivityItem>
-          <ActivityIcon>
-            <GraduationCap size={16} />
-          </ActivityIcon>
-          <ActivityContent>
-            <ActivityText>Yeni öğrenci kaydı: Ali Veli</ActivityText>
-            <ActivityTime>4 saat önce</ActivityTime>
-          </ActivityContent>
-        </ActivityItem>
-        <ActivityItem>
-          <ActivityIcon>
-            <BookOpen size={16} />
-          </ActivityIcon>
-          <ActivityContent>
-            <ActivityText>Yeni ders atandı: Gitar dersi</ActivityText>
-            <ActivityTime>6 saat önce</ActivityTime>
-          </ActivityContent>
-        </ActivityItem>
-        <ActivityItem>
-          <ActivityIcon>
-            <CreditCard size={16} />
-          </ActivityIcon>
-          <ActivityContent>
-            <ActivityText>Ödeme kaydedildi: ₺1,500</ActivityText>
-            <ActivityTime>1 gün önce</ActivityTime>
-          </ActivityContent>
-        </ActivityItem>
-      </RecentActivity>
     </DashboardContainer>
   );
 };

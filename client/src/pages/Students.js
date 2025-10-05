@@ -295,11 +295,82 @@ const Button = styled.button`
   }
 `;
 
+const FilterSection = styled.div`
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+`;
+
+const FilterRow = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+`;
+
+const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
+const FilterLabel = styled.label`
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+`;
+
+const FilterInput = styled.input`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const FilterSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const ClearButton = styled.button`
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  
+  &:hover {
+    background: #545b62;
+  }
+`;
+
 const Students = () => {
   const [students, setStudents] = useState([]);
+  const [filteredStudents, setFilteredStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    lesson_type: '',
+    age_range: ''
+  });
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -314,6 +385,44 @@ const Students = () => {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    filterStudents();
+  }, [students, filters]);
+
+  const filterStudents = () => {
+    let filtered = [...students];
+
+    // Arama filtresi
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(student => 
+        `${student.first_name} ${student.last_name}`.toLowerCase().includes(searchLower) ||
+        student.email?.toLowerCase().includes(searchLower) ||
+        student.phone?.includes(searchLower)
+      );
+    }
+
+    // Ders tipi filtresi
+    if (filters.lesson_type) {
+      filtered = filtered.filter(student => 
+        student.lesson_types?.includes(filters.lesson_type) ||
+        student.instruments?.includes(filters.lesson_type)
+      );
+    }
+
+    // Yaş aralığı filtresi
+    if (filters.age_range) {
+      const [minAge, maxAge] = filters.age_range.split('-').map(Number);
+      filtered = filtered.filter(student => {
+        const age = calculateAge(student.birth_date);
+        if (age === 'Belirtilmemiş') return false;
+        return age >= minAge && age <= maxAge;
+      });
+    }
+
+    setFilteredStudents(filtered);
+  };
 
   const fetchStudents = async () => {
     try {
@@ -418,8 +527,57 @@ const Students = () => {
         </AddButton>
       </Header>
 
+      <FilterSection>
+        <h3 style={{ marginBottom: '15px', color: '#333' }}>Filtreler</h3>
+        <FilterRow>
+          <FilterGroup>
+            <FilterLabel>Arama</FilterLabel>
+            <FilterInput
+              type="text"
+              placeholder="Ad, soyad, e-posta veya telefon ile ara..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            />
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Ders Tipi</FilterLabel>
+            <FilterSelect
+              value={filters.lesson_type}
+              onChange={(e) => setFilters({ ...filters, lesson_type: e.target.value })}
+            >
+              <option value="">Tüm Dersler</option>
+              <option value="gitar">Gitar</option>
+              <option value="keman">Keman</option>
+              <option value="piyano">Piyano</option>
+              <option value="bağlama">Bağlama</option>
+              <option value="flüt">Flüt</option>
+              <option value="davul">Davul</option>
+              <option value="art">Resim</option>
+            </FilterSelect>
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Yaş Aralığı</FilterLabel>
+            <FilterSelect
+              value={filters.age_range}
+              onChange={(e) => setFilters({ ...filters, age_range: e.target.value })}
+            >
+              <option value="">Tüm Yaşlar</option>
+              <option value="5-10">5-10 yaş</option>
+              <option value="11-15">11-15 yaş</option>
+              <option value="16-20">16-20 yaş</option>
+              <option value="21-30">21-30 yaş</option>
+              <option value="31-50">31-50 yaş</option>
+              <option value="51-100">51+ yaş</option>
+            </FilterSelect>
+          </FilterGroup>
+          <ClearButton onClick={() => setFilters({ search: '', lesson_type: '', age_range: '' })}>
+            Temizle
+          </ClearButton>
+        </FilterRow>
+      </FilterSection>
+
       <StudentsGrid>
-        {students.map((student) => (
+        {filteredStudents.map((student) => (
           <StudentCard key={student.id}>
             <StudentHeader>
               <StudentAvatar>

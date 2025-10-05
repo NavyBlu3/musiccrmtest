@@ -344,13 +344,84 @@ const ToggleButton = styled.button`
   }
 `;
 
+const FilterSection = styled.div`
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+`;
+
+const FilterRow = styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+`;
+
+const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
+const FilterLabel = styled.label`
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+`;
+
+const FilterInput = styled.input`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const FilterSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const ClearButton = styled.button`
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  
+  &:hover {
+    background: #545b62;
+  }
+`;
+
 const Schedule = () => {
   const [schedule, setSchedule] = useState([]);
+  const [filteredSchedule, setFilteredSchedule] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'calendar'
+  const [filters, setFilters] = useState({
+    search: '',
+    day_of_week: '',
+    lesson_type: ''
+  });
   const [formData, setFormData] = useState({
     lesson_id: '',
     day_of_week: 1,
@@ -370,6 +441,44 @@ const Schedule = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    filterSchedule();
+  }, [schedule, filters]);
+
+  const filterSchedule = () => {
+    let filtered = [...schedule];
+
+    // Arama filtresi
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(scheduleItem => {
+        const lessonInfo = getLessonInfo(scheduleItem.lesson_id);
+        if (!lessonInfo) return false;
+        return lessonInfo.student.toLowerCase().includes(searchLower) ||
+               lessonInfo.teacher.toLowerCase().includes(searchLower) ||
+               lessonInfo.instrument?.toLowerCase().includes(searchLower);
+      });
+    }
+
+    // Gün filtresi
+    if (filters.day_of_week) {
+      filtered = filtered.filter(scheduleItem => 
+        scheduleItem.day_of_week === parseInt(filters.day_of_week)
+      );
+    }
+
+    // Ders tipi filtresi
+    if (filters.lesson_type) {
+      filtered = filtered.filter(scheduleItem => {
+        const lessonInfo = getLessonInfo(scheduleItem.lesson_id);
+        if (!lessonInfo) return false;
+        return lessonInfo.type === filters.lesson_type;
+      });
+    }
+
+    setFilteredSchedule(filtered);
+  };
 
   const fetchData = async () => {
     try {
@@ -506,6 +615,47 @@ const Schedule = () => {
         </ToggleButton>
       </ViewToggle>
 
+      <FilterSection>
+        <h3 style={{ marginBottom: '15px', color: '#333' }}>Filtreler</h3>
+        <FilterRow>
+          <FilterGroup>
+            <FilterLabel>Arama</FilterLabel>
+            <FilterInput
+              type="text"
+              placeholder="Öğrenci, öğretmen veya enstrüman ile ara..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            />
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Gün</FilterLabel>
+            <FilterSelect
+              value={filters.day_of_week}
+              onChange={(e) => setFilters({ ...filters, day_of_week: e.target.value })}
+            >
+              <option value="">Tüm Günler</option>
+              {dayNames.map((day, index) => (
+                <option key={index} value={index}>{day}</option>
+              ))}
+            </FilterSelect>
+          </FilterGroup>
+          <FilterGroup>
+            <FilterLabel>Ders Tipi</FilterLabel>
+            <FilterSelect
+              value={filters.lesson_type}
+              onChange={(e) => setFilters({ ...filters, lesson_type: e.target.value })}
+            >
+              <option value="">Tüm Dersler</option>
+              <option value="instrument">Enstrüman</option>
+              <option value="art">Resim</option>
+            </FilterSelect>
+          </FilterGroup>
+          <ClearButton onClick={() => setFilters({ search: '', day_of_week: '', lesson_type: '' })}>
+            Temizle
+          </ClearButton>
+        </FilterRow>
+      </FilterSection>
+
       {viewMode === 'calendar' ? (
         <CalendarContainer>
           <WeekView>
@@ -517,7 +667,27 @@ const Schedule = () => {
                   {timeSlots.map((time, timeIndex) => (
                     <TimeSlot key={timeIndex}>{time}</TimeSlot>
                   ))}
-                  {getScheduleForDay(index).map((scheduleItem) => {
+                  {getScheduleForDay(index).filter(scheduleItem => {
+                    const lessonInfo = getLessonInfo(scheduleItem.lesson_id);
+                    if (!lessonInfo) return false;
+                    
+                    // Arama filtresi
+                    if (filters.search) {
+                      const searchLower = filters.search.toLowerCase();
+                      if (!lessonInfo.student.toLowerCase().includes(searchLower) &&
+                          !lessonInfo.teacher.toLowerCase().includes(searchLower) &&
+                          !lessonInfo.instrument?.toLowerCase().includes(searchLower)) {
+                        return false;
+                      }
+                    }
+                    
+                    // Ders tipi filtresi
+                    if (filters.lesson_type && lessonInfo.type !== filters.lesson_type) {
+                      return false;
+                    }
+                    
+                    return true;
+                  }).map((scheduleItem) => {
                     const lessonInfo = getLessonInfo(scheduleItem.lesson_id);
                     if (!lessonInfo) return null;
                     
@@ -554,7 +724,7 @@ const Schedule = () => {
             <div>İşlemler</div>
           </TableHeader>
           
-          {schedule.map((scheduleItem) => {
+          {filteredSchedule.map((scheduleItem) => {
             const lessonInfo = getLessonInfo(scheduleItem.lesson_id);
             if (!lessonInfo) return null;
             
