@@ -86,7 +86,7 @@ const Header = ({ onToggleSidebar }) => {
         <MenuButton onClick={onToggleSidebar}>
           <Menu size={24} />
         </MenuButton>
-        <Title>Müzik Okulu Yönetim Sistemi</Title>
+        <Title>Bariton Müzik Yönetim Otomasyonu</Title>
       </LeftSection>
       <RightSection>
         <NotificationButton>
@@ -94,7 +94,7 @@ const Header = ({ onToggleSidebar }) => {
         </NotificationButton>
         <UserButton>
           <User size={20} />
-          <UserName>Admin</UserName>
+          <UserName>Fatih</UserName>
         </UserButton>
       </RightSection>
     </HeaderContainer>
